@@ -1,52 +1,87 @@
-// hooks/useAuth.tsx  contraseñas establecidas
-import React, { createContext, useContext, useMemo, useState } from "react";
+// app/hooks/useAuth.tsx
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Role = "admin" | "client";
 type User = { email: string; role: Role };
 
 type AuthCtx = {
   user: User | null;
-  ready: boolean; // si luego quieres cargar/persistir, te sirve
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  logout: () => void;
+  ready: boolean;
+  login: (
+    email: string,
+    password: string
+  ) => Promise<{ ok: boolean; error?: string; user?: User }>;
+  logout: () => Promise<void>;
 };
 
-// Cuentas fijas (mock)
+// cuentas de prueba
 const USERS: Record<string, { password: string; role: Role }> = {
   "admin@gmail.com": { password: "12345", role: "admin" },
   "cliente@gmail.com": { password: "67890", role: "client" },
 };
 
-const Ctx = createContext<AuthCtx | null>(null);
+const AuthContext = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [ready, setReady] = useState(false);
+
+  // cargar sesión guardada
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem("session");
+        if (raw) {
+          const parsed = JSON.parse(raw) as User;
+          setUser(parsed);
+        }
+      } finally {
+        setReady(true);
+      }
+    })();
+  }, []);
 
   const value = useMemo<AuthCtx>(
     () => ({
       user,
-      ready: true, // si persistes, cámbialo tras cargar
+      ready,
+
       async login(email, password) {
         const key = email.trim().toLowerCase();
         const found = USERS[key];
         if (!found || found.password !== password) {
           return { ok: false, error: "Correo o contraseña incorrectos." };
         }
-        setUser({ email: key, role: found.role });
-        return { ok: true };
+
+        const logged: User = { email: key, role: found.role };
+        setUser(logged);
+        await AsyncStorage.setItem("session", JSON.stringify(logged));
+        // 👇 aquí está el cambio
+        return { ok: true, user: logged };
       },
-      logout() {
+
+      async logout() {
         setUser(null);
+        await AsyncStorage.removeItem("session");
       },
     }),
-    [user]
+    [user, ready]
   );
 
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
-  const ctx = useContext(Ctx);
-  if (!ctx) throw new Error("useAuth debe usarse dentro de AuthProvider");
+  const ctx = useContext(AuthContext);
+  if (!ctx) {
+    throw new Error("useAuth debe usarse dentro de AuthProvider");
+  }
   return ctx;
 }

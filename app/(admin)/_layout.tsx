@@ -1,9 +1,9 @@
-// app/(tabs)/_layout.tsx
+// app/(admin)/_layout.tsx
 import React from "react";
 import { Tabs } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function ClientTabs() {
+export default function AdminTabs() {
   return (
     <Tabs
       screenOptions={{
@@ -11,7 +11,6 @@ export default function ClientTabs() {
         tabBarActiveTintColor: "#5443EA",
       }}
     >
-      {/* ✅ los que sí quieres */}
       <Tabs.Screen
         name="index"
         options={{
@@ -23,21 +22,11 @@ export default function ClientTabs() {
       />
 
       <Tabs.Screen
-        name="agendar"
+        name="ganancias"
         options={{
-          title: "agendar",
+          title: "ganancias",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar-outline" color={color} size={size} />
-          ),
-        }}
-      />
-
-      <Tabs.Screen
-        name="citas"
-        options={{
-          title: "citas",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="file-tray-full-outline" color={color} size={size} />
+            <Ionicons name="trending-up-outline" color={color} size={size} />
           ),
         }}
       />
@@ -49,20 +38,6 @@ export default function ClientTabs() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-circle-outline" color={color} size={size} />
           ),
-        }}
-      />
-
-      {/* ❌ los que quieres ocultar porque existen como archivos */}
-      <Tabs.Screen
-        name="cliente"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
-        name="ganancias"
-        options={{
-          href: null,
         }}
       />
     </Tabs>

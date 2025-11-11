@@ -1,9 +1,10 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+// app/(auth)/login.tsx
 import React, { useState } from "react";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { View, Text, TextInput, StyleSheet, Pressable, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useAuth } from "../../hooks/useAuth";
 
 const BG = "#f9fafb";
 const CARD = "#ffffff";
@@ -19,13 +20,8 @@ const SHADOW = {
   elevation: 3,
 };
 
-// Cuentas mock
-const ACCOUNTS: Record<string, { password: string; role: "admin" | "client" }> = {
-  "admin@gmail.com": { password: "12345", role: "admin" },
-  "cliente@gmail.com": { password: "67890", role: "client" },
-};
-
 export default function Login() {
+  const { login } = useAuth();   // 👈 usamos el contexto
   const [email, setEmail] = useState("");
   const [pwd, setPwd] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -35,28 +31,20 @@ export default function Login() {
 
   const onLogin = async () => {
     if (!valid || loading) return;
-    try {
-      setLoading(true);
+    setLoading(true);
+    const res = await login(email, pwd);   // 👈 aquí
+    setLoading(false);
 
-      const key = email.trim().toLowerCase();
-      const found = ACCOUNTS[key];
-      if (!found || found.password !== pwd) {
-        Alert.alert("Credenciales inválidas", "Revisa tu correo o contraseña.");
-        return;
-      }
+    if (!res.ok || !res.user) {
+      Alert.alert("Credenciales inválidas", res.error ?? "Revisa tus datos.");
+      return;
+    }
 
-      await AsyncStorage.setItem(
-        "session",
-        JSON.stringify({ email: key, role: found.role })
-      );
-
-      // Admin -> "/", Cliente -> "/cliente"
-      router.replace(found.role === "admin" ? "/" : "/cliente");
-    } catch (e) {
-      console.error(e);
-      Alert.alert("Error", "Ocurrió un problema al iniciar sesión.");
-    } finally {
-      setLoading(false);
+    // ya sabemos el rol porque viene del contexto
+    if (res.user.role === "admin") {
+      router.replace("/(admin)");
+    } else {
+      router.replace("/(tabs)");
     }
   };
 
@@ -91,31 +79,12 @@ export default function Login() {
           </Pressable>
         </View>
 
-        <Pressable onPress={() => Alert.alert("Recuperar", "Implementa aquí tu flujo de recuperar contraseña.")}>
-          <Text style={styles.linkMuted}>¿Olvidaste tu contraseña?</Text>
-        </Pressable>
-
         <Pressable
           onPress={onLogin}
           disabled={!valid || loading}
           style={[styles.primaryBtn, { opacity: valid && !loading ? 1 : 0.6 }]}
         >
           <Text style={styles.primaryText}>{loading ? "Entrando..." : "Iniciar sesión"}</Text>
-        </Pressable>
-
-        <Pressable
-          style={styles.googleBtn}
-          onPress={() => Alert.alert("Google", "Conecta tu flujo de Google OAuth aquí.")}
-        >
-          <Ionicons name="arrow-forward-outline" size={18} color={TEXT} />
-          <Text style={styles.googleText}>Continuar con Google</Text>
-        </Pressable>
-
-        <View style={{ height: 14 }} />
-
-        <Text style={styles.smallMuted}>¿No tienes una cuenta?</Text>
-        <Pressable onPress={() => router.push("/register")}>
-          <Text style={styles.linkBold}>Regístrate</Text>
         </Pressable>
       </View>
     </SafeAreaView>
@@ -127,21 +96,24 @@ const styles = StyleSheet.create({
   container: { flex: 1, alignItems: "center", justifyContent: "center" },
   title: { fontSize: 26, fontWeight: "800", color: TEXT, marginBottom: 18 },
   inputWrap: {
-    width: "100%", backgroundColor: CARD, borderRadius: 12, borderWidth: 1, borderColor: BORDER,
-    ...SHADOW, marginBottom: 12, position: "relative"
+    width: "100%",
+    backgroundColor: CARD,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
+    ...SHADOW,
+    marginBottom: 12,
+    position: "relative",
   },
   input: { paddingHorizontal: 14, paddingVertical: 12, color: TEXT },
   eyeBtn: { position: "absolute", right: 12, top: 12 },
-  linkMuted: { color: MUTED, marginTop: 4, marginBottom: 12 },
   primaryBtn: {
-    width: "100%", backgroundColor: ACCENT, paddingVertical: 12, borderRadius: 12, alignItems: "center", marginBottom: 12
+    width: "100%",
+    backgroundColor: ACCENT,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 12,
   },
   primaryText: { color: "#fff", fontWeight: "700" },
-  googleBtn: {
-    width: "100%", backgroundColor: CARD, borderRadius: 12, borderWidth: 1, borderColor: BORDER,
-    paddingVertical: 12, alignItems: "center", justifyContent: "center", flexDirection: "row", gap: 8, ...SHADOW
-  },
-  googleText: { color: TEXT, fontWeight: "600" },
-  smallMuted: { color: MUTED, marginTop: 18, marginBottom: 4 },
-  linkBold: { color: TEXT, fontWeight: "800", fontSize: 16, textDecorationLine: "underline" },
 });

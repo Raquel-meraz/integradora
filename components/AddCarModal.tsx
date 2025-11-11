@@ -1,46 +1,97 @@
-import React, { useEffect, useState } from "react"; 
-import { Modal, View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, Alert } from "react-native";
+// components/AddCarModal.tsx
+import React, { useEffect, useState } from "react";
+import {
+  Modal,
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
+  ScrollView,
+} from "react-native";
+import { styles } from "./styles/AddCarModal.styles";
 
-export type Car = { id: string; name: string; year: string; plate: string; selected: boolean };
+const VEHICULO_OPTS = [
+  "carro chico",
+  "carro grande",
+  "camioneta chica",
+  "camioneta grande",
+  "motocicleta chica",
+  "motocicleta grande",
+];
 
-const CARD = "#ffffff";
-const TEXT = "#111827";
-const MUTED = "#6b7280";
-const BORDER = "#e5e7eb";
+export type Car = {
+  id: string;
+  name: string;
+  year: string;
+  plate: string;
+  selected: boolean;
+  color?: string;
+  vehiculo?: string;
+};
 
 type Props = {
   visible: boolean;
   onClose: () => void;
   onSave: (car: Car) => void;
+  car?: Car; // 👈 si viene, es edición
 };
 
-export default function AddCarModal({ visible, onClose, onSave }: Props) {
+export default function AddCarModal({ visible, onClose, onSave, car }: Props) {
   const [name, setName] = useState("");
   const [year, setYear] = useState("");
-  const [plate, setPlate] = useState("");   // <- guarda SOLO el sufijo (4 alfanuméricos)
-  const [raw, setRaw] = useState("");       // <- lo que escribe el usuario (letras/números/guión)
+  const [plate, setPlate] = useState("");
+  const [raw, setRaw] = useState("");
+  const [color, setColor] = useState("");
+  const [vehiculo, setVehiculo] = useState("");
+  const [tried, setTried] = useState(false);
 
+  // cuando abre: si hay car = editar, si no, limpiar
   useEffect(() => {
-    if (visible) { setName(""); setYear(""); setPlate(""); setRaw(""); }
-  }, [visible]);
+    if (visible) {
+      if (car) {
+        setName(car.name);
+        setYear(car.year);
+        setPlate(car.plate);
+        setRaw(car.plate);
+        setColor(car.color ?? "");
+        setVehiculo(car.vehiculo ?? "");
+      } else {
+        setName("");
+        setYear("");
+        setPlate("");
+        setRaw("");
+        setColor("");
+        setVehiculo("");
+      }
+      setTried(false);
+    }
+  }, [visible, car]);
 
-  // ✅ Válido: nombre >=3, año 4 dígitos, placas = 4 alfanuméricos
-  const valid =
-    name.trim().length >= 3 &&
-    /^\d{4}$/.test(year.trim()) &&
-    /^[A-Z0-9]{4}$/.test(plate.trim());
+  const validName = name.trim().length >= 3;
+  const validYear = /^\d{4}$/.test(year.trim());
+  const validPlate = /^[A-Z0-9]{3}$/.test(plate.trim());
+  const validColor = color.trim().length >= 3;
+  const validVehiculo = vehiculo.trim().length > 0;
+
+  const valid = validName && validYear && validPlate && validColor && validVehiculo;
 
   const handleSave = () => {
+    setTried(true);
     if (!valid) {
-      Alert.alert("Faltan datos", "Revisa marca/modelo, año (4 dígitos) y placas (4 últimas letras/números).");
+      Alert.alert("Faltan datos", "Completa todos los campos para continuar.");
       return;
     }
     onSave({
-      id: String(Date.now()),
+      id: car ? car.id : String(Date.now()), // 👈 si edita, conserva id
       name: name.trim().toUpperCase(),
       year: year.trim(),
-      plate: plate.trim().toUpperCase(), // ej. "099D"
+      plate: plate.trim().toUpperCase(),
       selected: false,
+      color: color.trim(),
+      vehiculo,
     });
   };
 
@@ -49,8 +100,9 @@ export default function AddCarModal({ visible, onClose, onSave }: Props) {
       <View style={styles.backdrop}>
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ width: "100%" }}>
           <View style={styles.sheet}>
-            <Text style={styles.title}>Nuevo auto</Text>
+            <Text style={styles.title}>{car ? "Editar auto" : "Nuevo auto"}</Text>
 
+            {/* Marca / Modelo */}
             <View style={styles.group}>
               <Text style={styles.label}>Marca / Modelo</Text>
               <TextInput
@@ -58,10 +110,11 @@ export default function AddCarModal({ visible, onClose, onSave }: Props) {
                 onChangeText={setName}
                 placeholder="Ej. NISSAN VERSA"
                 placeholderTextColor="#9aa1aa"
-                style={styles.input}
+                style={[styles.input, tried && !validName && { borderColor: "red" }]}
               />
             </View>
 
+            {/* Año + Placas */}
             <View style={{ flexDirection: "row", gap: 12 }}>
               <View style={[styles.group, { flex: 1 }]}>
                 <Text style={styles.label}>Año</Text>
@@ -71,33 +124,61 @@ export default function AddCarModal({ visible, onClose, onSave }: Props) {
                   keyboardType="numeric"
                   placeholder="2022"
                   placeholderTextColor="#9aa1aa"
-                  style={styles.input}
+                  style={[styles.input, tried && !validYear && { borderColor: "red" }]}
                   maxLength={4}
                 />
               </View>
 
               <View style={[styles.group, { flex: 1 }]}>
-                <Text style={styles.label}>Placas (4 últimas letras/números)</Text>
+                <Text style={styles.label}>Placas (3 últimas letras/números)</Text>
                 <TextInput
                   value={raw}
                   onChangeText={(t) => {
-                    // Acepta letras, números y guiones mientras escribe
-                    const sanitized = t.toUpperCase().replace(/[^A-Z0-9-]/g, "");
-                    setRaw(sanitized);
-
-                    // Extrae ÚLTIMOS 4 alfanuméricos (ignora guiones)
-                    const alnum = sanitized.replace(/[^A-Z0-9]/g, "");
-                    const suffix4 = alnum.slice(-4);
-                    setPlate(suffix4);
+                    const only3 = t.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 3);
+                    setRaw(only3);
+                    setPlate(only3);
                   }}
-                  placeholder="12D-Y"
+                  placeholder="12D"
                   placeholderTextColor="#9aa1aa"
-                  style={styles.input}
+                  style={[styles.input, tried && !validPlate && { borderColor: "red" }]}
                   autoCapitalize="characters"
+                  maxLength={3}
                 />
               </View>
             </View>
 
+            {/* Color */}
+            <View style={styles.group}>
+              <Text style={styles.label}>Color</Text>
+              <TextInput
+                value={color}
+                onChangeText={setColor}
+                placeholder="Rojo, blanco, gris..."
+                placeholderTextColor="#9aa1aa"
+                style={[styles.input, tried && !validColor && { borderColor: "red" }]}
+              />
+            </View>
+
+            {/* Vehículo */}
+            <View style={styles.group}>
+              <Text style={styles.label}>Vehículo</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipsRow}>
+                {VEHICULO_OPTS.map((v) => (
+                  <TouchableOpacity
+                    key={v}
+                    onPress={() => setVehiculo(v)}
+                    style={[styles.chip, vehiculo === v && styles.chipActive]}
+                  >
+                    <Text style={[styles.chipText, vehiculo === v && styles.chipTextActive]}>{v}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              {tried && !validVehiculo ? (
+                <Text style={{ color: "red", fontSize: 11, marginTop: 4 }}>Selecciona un tipo de vehículo</Text>
+              ) : null}
+            </View>
+
+            {/* Botones */}
             <View style={{ flexDirection: "row", marginTop: 14 }}>
               <TouchableOpacity onPress={onClose} style={[styles.btnOutline, { flex: 1, marginRight: 8 }]}>
                 <Text style={styles.btnOutlineText}>Cancelar</Text>
@@ -107,7 +188,7 @@ export default function AddCarModal({ visible, onClose, onSave }: Props) {
                 disabled={!valid}
                 style={[styles.btn, { flex: 1, marginLeft: 8, opacity: valid ? 1 : 0.6 }]}
               >
-                <Text style={styles.btnText}>Guardar</Text>
+                <Text style={styles.btnText}>{car ? "Guardar cambios" : "Guardar"}</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -116,16 +197,3 @@ export default function AddCarModal({ visible, onClose, onSave }: Props) {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.25)", alignItems: "center", justifyContent: "center", padding: 24 },
-  sheet: { width: "100%", backgroundColor: CARD, borderRadius: 12, padding: 16, borderWidth: 1, borderColor: BORDER },
-  title: { fontSize: 18, fontWeight: "800", textAlign: "center", marginBottom: 10, color: TEXT },
-  group: { marginBottom: 12 },
-  label: { color: MUTED, fontSize: 12, marginBottom: 6 },
-  input: { backgroundColor: "#f9fafb", borderWidth: 1, borderColor: BORDER, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, color: TEXT },
-  btn: { backgroundColor: "#111827", paddingVertical: 10, borderRadius: 10, alignItems: "center" },
-  btnText: { color: "#fff", fontWeight: "700" },
-  btnOutline: { borderWidth: 2, borderColor: "#111827", paddingVertical: 10, borderRadius: 10, alignItems: "center" },
-  btnOutlineText: { color: "#111827", fontWeight: "700" },
-});

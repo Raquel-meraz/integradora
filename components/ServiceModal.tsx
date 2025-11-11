@@ -6,34 +6,33 @@ import {
   Text,
   Pressable,
   TouchableOpacity,
-  StyleSheet,
+  ScrollView,
 } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { serviceModalStyles as styles } from "./styles/ServiceModal.styles";
 
 export type Service = { id: string; label: string; price: number; timeMin: number };
 
-// Puedes editar precios/tiempos aquí
 const SERVICES: Service[] = [
   { id: "ext", label: "Exterior", price: 120, timeMin: 30 },
   { id: "int", label: "Interior", price: 130, timeMin: 40 },
   { id: "full", label: "Completo", price: 200, timeMin: 70 },
+  { id: "basic", label: "Lavado básico", price: 110, timeMin: 25 },
+  { id: "prem", label: "Lavado premium", price: 160, timeMin: 35 },
+  { id: "wax", label: "Encerado", price: 180, timeMin: 45 },
+  { id: "polish", label: "Pulido", price: 250, timeMin: 60 },
+  { id: "det-int", label: "Detallado interior", price: 220, timeMin: 55 },
+  { id: "det-full", label: "Detallado completo", price: 320, timeMin: 80 },
 ];
 
-// Solo necesitamos estos campos del auto
 type CarLike = { name: string; year: string; plate: string };
 
 type Props = {
   visible: boolean;
-  car?: CarLike | null;                // 👈 nuevo
+  car?: CarLike | null;
   onClose: () => void;
   onConfirm: (service: Service) => void;
 };
-
-const CARD = "#ffffff";
-const TEXT = "#111827";
-const MUTED = "#6b7280";
-const BORDER = "#e5e7eb";
-const ACCENT = "#111827";
 
 export default function ServiceModal({ visible, car, onClose, onConfirm }: Props) {
   const [selected, setSelected] = useState<Service | null>(null);
@@ -44,35 +43,38 @@ export default function ServiceModal({ visible, car, onClose, onConfirm }: Props
         <View style={styles.sheet}>
           <Text style={styles.title}>Agendar cita</Text>
 
-          {/* Header con datos del auto */}
           {car && (
             <View style={styles.carCard}>
               <MaterialCommunityIcons name="car-hatchback" size={24} style={{ marginRight: 10 }} />
               <View style={{ flex: 1 }}>
                 <Text style={styles.carTitle}>{car.name}</Text>
-                <Text style={styles.carMeta}>{car.year}    {car.plate}</Text>
+                <Text style={styles.carMeta}>
+                  {car.year}    {car.plate}
+                </Text>
               </View>
             </View>
           )}
 
           <Text style={styles.subtitle}>Servicios</Text>
 
-          {SERVICES.map((s) => {
-            const active = selected?.id === s.id;
-            return (
-              <Pressable
-                key={s.id}
-                onPress={() => setSelected(s)}
-                style={[styles.row, active && styles.rowActive]}
-              >
-                <Text style={styles.left}>{s.label}</Text>
-                <View style={{ alignItems: "flex-end" }}>
-                  <Text style={styles.right}>${s.price}</Text>
-                  <Text style={[styles.right, { color: MUTED }]}>{s.timeMin} min.</Text>
-                </View>
-              </Pressable>
-            );
-          })}
+          <ScrollView style={styles.servicesScroll}>
+            {SERVICES.map((s) => {
+              const active = selected?.id === s.id;
+              return (
+                <Pressable
+                    key={s.id}
+                    onPress={() => setSelected(s)}
+                    style={[styles.row, active && styles.rowActive]}
+                >
+                  <Text style={styles.left}>{s.label}</Text>
+                  <View style={{ alignItems: "flex-end" }}>
+                    <Text style={styles.right}>${s.price}</Text>
+                    <Text style={[styles.right, { color: "#6b7280" }]}>{s.timeMin} min.</Text>
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
 
           <View style={styles.actions}>
             <TouchableOpacity onPress={onClose} style={[styles.btnOutline, { marginRight: 8 }]}>
@@ -91,71 +93,3 @@ export default function ServiceModal({ visible, car, onClose, onConfirm }: Props
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.25)",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 24,
-  },
-  sheet: {
-    width: "100%",
-    backgroundColor: CARD,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: BORDER,
-  },
-  title: { fontSize: 20, fontWeight: "800", textAlign: "center", color: TEXT, marginBottom: 10 },
-
-  // Header del auto
-  carCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    borderWidth: 1,
-    borderColor: BORDER,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 12,
-  },
-  carTitle: { fontWeight: "800", color: TEXT, letterSpacing: 0.3 },
-  carMeta: { color: MUTED, marginTop: 2, fontSize: 13 },
-
-  subtitle: { fontSize: 12, color: MUTED, marginBottom: 6 },
-  row: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: BORDER,
-    borderRadius: 10,
-    paddingHorizontal: 6,
-  },
-  rowActive: { backgroundColor: "#f3f4f6" },
-  left: { fontSize: 16, color: TEXT, fontWeight: "600" },
-  right: { fontSize: 14, color: TEXT },
-
-  actions: { flexDirection: "row", marginTop: 14 },
-  btn: {
-    flex: 1,
-    backgroundColor: ACCENT,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  btnText: { color: "#fff", fontWeight: "700" },
-  btnOutline: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: ACCENT,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  btnOutlineText: { color: ACCENT, fontWeight: "700" },
-});

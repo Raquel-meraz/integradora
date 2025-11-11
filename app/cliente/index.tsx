@@ -7,6 +7,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useAppointments } from "../../hooks/useAppointments";
+import { PlanesSection } from "./planes"; // ✅ import de la sección reutilizable
 
 // Paleta y sombras (tu estilo)
 const BG = "#f3f4f6";
@@ -145,6 +146,9 @@ export default function ClienteHome() {
             </Pressable>
           </View>
         )}
+
+        {/* ======== Sección: Planes de lavado (abajo) ======== */}
+        <PlanesSection onSelect={() => router.push("/agendar")} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -184,8 +188,6 @@ function Row({ icon, label }: { icon: React.ReactNode; label: string }) {
     </View>
   );
 }
-
-/* ---------- Estilos ---------- */
 
 const s = StyleSheet.create({
   screen: { flex: 1, backgroundColor: BG, paddingHorizontal: 16, paddingTop: 6 },
